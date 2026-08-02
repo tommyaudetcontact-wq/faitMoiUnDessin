@@ -421,7 +421,7 @@
 
     @keyframes fadeIn {
       0% { opacity: 0; transform: scale(0.9); }
-      100% { opacity: 1; transform: scale(1); }
+      100% { transform: scale(1); }
     }
   </style>
 </head>
@@ -487,8 +487,8 @@
         </div>
       </div>
 
+      <!-- BOUTON DÉMARRER SPÉCIFIQUE AU CHEF DE PARTIE -->
       <div style="text-align: center; margin-top: 10px;">
-        <!-- Le bouton est activé pour l'hôte OU pour le chef de partie sur téléphone -->
         <button id="btn-start-game" class="sims-btn sims-btn-green" style="display: none; font-size: 1.2rem; padding: 10px 24px;" onclick="startGame()">▶ LANCER LA PARTIE</button>
       </div>
     </div>
@@ -584,7 +584,7 @@
           <img id="gallery-img" class="gallery-img" src="" alt="Dessin">
           <p id="gallery-winner" style="color: var(--sims-plumbob-green); font-weight: bold;">Deviné par : ...</p>
         </div>
-        <div style="margin-top: 12px;">
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
           <button class="sims-btn sims-btn-green" onclick="location.href=location.pathname">🎮 Menu Principal</button>
         </div>
       </div>
@@ -609,13 +609,17 @@
     </div>
   </div>
 
-  <!-- MODAL CLASSEMENT FINAL -->
+  <!-- MODAL CLASSEMENT FINAL ET COMMANDES CHEF DE PARTIE -->
   <div id="gameover-modal" class="modal">
     <div class="modal-card">
       <h2>🏆 FIN DE LA PARTIE 🏆</h2>
       <p style="margin: 8px 0; color: var(--sims-cyan-gloss);">Résultats des 3 Manches :</p>
       <div id="final-scores-list" style="display: flex; flex-direction: column; gap: 6px; margin: 12px 0;"></div>
-      <p id="gameover-subtext" style="font-size: 0.8rem; color: var(--sims-yellow);">Lancement automatique de la Galerie...</p>
+      
+      <div id="leader-final-controls" style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+        <button id="btn-show-gallery" class="sims-btn sims-btn-yellow" onclick="triggerGalleryFromLeader()">🖼️ AFFICHER LA GALERIE SUR TV</button>
+        <button class="sims-btn sims-btn-green" onclick="location.href=location.pathname">🔄 REJOUER UNE PARTIE</button>
+      </div>
     </div>
   </div>
 
@@ -780,6 +784,8 @@
           broadcastState();
         } else if (data.type === 'START_GAME_REQ') {
           startGame();
+        } else if (data.type === 'TRIGGER_GALLERY_REQ') {
+          startGalleryShow();
         } else if (data.type === 'WORD_CHOSEN') {
           onWordChosen(data.word);
         } else if (data.type === 'REQUEST_REGEN_WORDS') {
@@ -842,7 +848,7 @@
         gameMode = data.gameMode || "pvp";
 
         // VÉRIFICATION DU CHEF DE PARTIE SUR CELLULAIRE :
-        // Si c'est le 1er joueur de la liste, on lui affiche TOUJOURS le bouton Démarrer
+        // Si c'est le 1er joueur de la liste, on lui affiche le bouton LANCER LA PARTIE
         const startBtn = document.getElementById('btn-start-game');
         if (players.length > 0 && players[0].id === myId) {
           startBtn.style.display = 'inline-block';
@@ -1080,10 +1086,15 @@
         container.appendChild(div);
       });
       document.getElementById('gameover-modal').classList.add('active');
+    }
 
-      setTimeout(() => {
+    function triggerGalleryFromLeader() {
+      if (isHost) {
         startGalleryShow();
-      }, 4000);
+      } else if (hostConn) {
+        hostConn.send({ type: 'TRIGGER_GALLERY_REQ' });
+        startGalleryShow();
+      }
     }
 
     function startGalleryShow() {
