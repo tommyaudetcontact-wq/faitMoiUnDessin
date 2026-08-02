@@ -487,9 +487,9 @@
         </div>
       </div>
 
-      <div style="text-align: center;">
-        <!-- Bouton Démarrer pour l'hôte ou le chef de partie -->
-        <button id="btn-start-game" class="sims-btn sims-btn-green" style="display: none; font-size: 1.1rem;" onclick="startGame()">▶ LANCER LA PARTIE</button>
+      <div style="text-align: center; margin-top: 10px;">
+        <!-- Le bouton est activé pour l'hôte OU pour le chef de partie sur téléphone -->
+        <button id="btn-start-game" class="sims-btn sims-btn-green" style="display: none; font-size: 1.2rem; padding: 10px 24px;" onclick="startGame()">▶ LANCER LA PARTIE</button>
       </div>
     </div>
 
@@ -841,9 +841,13 @@
         selectedDifficulty = data.selectedDifficulty || "moyen";
         gameMode = data.gameMode || "pvp";
 
-        // Le premier joueur sur mobile devient le Chef de Partie
-        if (!isHost && players.length > 0 && players[0].id === myId) {
-          document.getElementById('btn-start-game').style.display = 'inline-block';
+        // VÉRIFICATION DU CHEF DE PARTIE SUR CELLULAIRE :
+        // Si c'est le 1er joueur de la liste, on lui affiche TOUJOURS le bouton Démarrer
+        const startBtn = document.getElementById('btn-start-game');
+        if (players.length > 0 && players[0].id === myId) {
+          startBtn.style.display = 'inline-block';
+        } else if (!isHost) {
+          startBtn.style.display = 'none';
         }
 
         document.getElementById('display-difficulty').innerText = selectedDifficulty.toUpperCase();
@@ -881,7 +885,7 @@
         const isLeader = (index === 0);
         const div = document.createElement('div');
         div.className = 'player-card';
-        div.innerHTML = `<span>👤 <b>${p.name}</b> ${isLeader ? '<small style="color:var(--sims-yellow);">(Chef)</small>' : ''}</span>${p.emoji ? `<span class="emoji-bubble">${p.emoji}</span>` : ''}`;
+        div.innerHTML = `<span>👤 <b>${p.name}</b> ${isLeader ? '<small style="color:var(--sims-yellow); font-weight:bold;">(Chef de Partie)</small>' : ''}</span>${p.emoji ? `<span class="emoji-bubble">${p.emoji}</span>` : ''}`;
         list.appendChild(div);
       });
     }
