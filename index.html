@@ -234,7 +234,6 @@
       cursor: crosshair;
     }
 
-    /* Tiroir latéral positionné au-dessus sans écraser le dessin */
     .drawer-overlay {
       position: absolute;
       top: 0; right: 0; bottom: 0;
@@ -465,7 +464,7 @@
       <p style="text-align: center;">Code du Salon : <b id="display-room-code" style="color: var(--sims-yellow); font-size: 1.3rem;">----</b></p>
       <p style="text-align: center; font-size: 0.85rem; color: var(--sims-cyan-gloss);">Difficulté : <b id="display-difficulty">Moyen</b></p>
 
-      <!-- AFFICHAGE QR CODE EN MODE GRAND ECRAN -->
+      <!-- QR CODE MODE GRAND ECRAN -->
       <div id="qr-container" style="display: none; text-align: center; margin-top: 4px;">
         <p style="font-size: 0.8rem; color: var(--sims-yellow); font-weight: bold;">📷 Scannez avec votre téléphone pour rejoindre :</p>
         <div class="qr-box">
@@ -489,6 +488,7 @@
       </div>
 
       <div style="text-align: center;">
+        <!-- Bouton Démarrer pour l'hôte ou le chef de partie -->
         <button id="btn-start-game" class="sims-btn sims-btn-green" style="display: none; font-size: 1.1rem;" onclick="startGame()">▶ LANCER LA PARTIE</button>
       </div>
     </div>
@@ -615,7 +615,7 @@
       <h2>🏆 FIN DE LA PARTIE 🏆</h2>
       <p style="margin: 8px 0; color: var(--sims-cyan-gloss);">Résultats des 3 Manches :</p>
       <div id="final-scores-list" style="display: flex; flex-direction: column; gap: 6px; margin: 12px 0;"></div>
-      <p id="gameover-subtext" style="font-size: 0.8rem; color: var(--sims-yellow);">Affichage automatique de la Galerie...</p>
+      <p id="gameover-subtext" style="font-size: 0.8rem; color: var(--sims-yellow);">Lancement automatique de la Galerie...</p>
     </div>
   </div>
 
@@ -660,7 +660,6 @@
       const savedName = localStorage.getItem("sims2_draw_name");
       if (savedName) document.getElementById('player-name').value = savedName;
 
-      // Détection automatique du Code URL pour pré-remplir le mobile
       const urlParams = new URLSearchParams(window.location.search);
       const urlCode = urlParams.get('code');
       if (urlCode) {
@@ -733,7 +732,6 @@
           players.push({ id: myId, name: myName, score: 0, emoji: '' });
           document.getElementById('btn-start-game').style.display = 'inline-block';
         } else {
-          // Affiche le QR Code avec le lien pré-rempli
           document.getElementById('qr-container').style.display = 'block';
           document.getElementById('qrcode').innerHTML = "";
           
@@ -1079,7 +1077,6 @@
       });
       document.getElementById('gameover-modal').classList.add('active');
 
-      // Lancement automatique de la galerie après 4 secondes sur l'écran principal
       setTimeout(() => {
         startGalleryShow();
       }, 4000);
