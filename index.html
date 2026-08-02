@@ -6,6 +6,8 @@
   <title>Les Sims 2 Draw - Fais-moi un Dessin</title>
   <!-- PeerJS CDN -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <!-- QRCode.js CDN pour la génération du QR Code -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
 
@@ -378,7 +380,6 @@
       width: 90%;
     }
 
-    /* Styles de la Galerie Rétrospective */
     .gallery-container {
       display: flex;
       flex-direction: column;
@@ -410,6 +411,16 @@
       background: #fff;
       margin: 10px 0;
       object-fit: contain;
+    }
+
+    /* Style du QR Code Grand Ecran */
+    .qr-box {
+      background: #fff;
+      padding: 10px;
+      border-radius: 16px;
+      display: inline-block;
+      margin: 10px 0;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     }
 
     @keyframes fadeIn {
@@ -456,6 +467,14 @@
       <h2>SALON D'ATTENTE</h2>
       <p style="text-align: center;">Code du Salon : <b id="display-room-code" style="color: var(--sims-yellow); font-size: 1.3rem;">----</b></p>
       <p style="text-align: center; font-size: 0.85rem; color: var(--sims-cyan-gloss);">Difficulté : <b id="display-difficulty">Moyen</b></p>
+
+      <!-- AFFICHAGE DU QR CODE UNIQUEMENT EN MODE GRAND ECRAN -->
+      <div id="qr-container" style="display: none; text-align: center; margin-top: 8px;">
+        <p style="font-size: 0.85rem; color: var(--sims-yellow); font-weight: bold;">📷 Scannez pour rejoindre avec votre téléphone :</p>
+        <div class="qr-box">
+          <div id="qrcode"></div>
+        </div>
+      </div>
 
       <div style="max-width: 450px; margin: 10px auto; flex-grow: 1; display: flex; flex-direction: column; width: 100%;">
         <h3>Joueurs Présents</h3>
@@ -630,8 +649,7 @@
     let timerInterval = null;
     let timeLeft = 60;
 
-    // Galerie historique des dessins
-    let drawingGallery = []; // { imageData, drawerName, word, winnerName }
+    let drawingGallery = [];
     let galleryIndex = 0;
     let galleryTimer = null;
 
@@ -661,7 +679,6 @@
       localStorage.setItem("sims2_draw_name", myName);
     }
 
-    // --- API MOTS ---
     async function fetchWordsFromAPI(difficulty) {
       try {
         if (difficulty === 'moyen') {
@@ -684,7 +701,6 @@
       return pool.filter(w => !usedWords.has(w)).sort(() => 0.5 - Math.random()).slice(0, 3);
     }
 
-    // --- PEERJS ---
     function initPeer(customId = null, callback) {
       saveProfile();
       peer = customId ? new Peer(customId) : new Peer();
@@ -710,6 +726,18 @@
         
         if (gameMode !== 'grand_ecran') {
           players.push({ id: myId, name: myName, score: 0, emoji: '' });
+        } else {
+          // Si Mode Grand Ecran : Affiche le QR Code à scanner
+          document.getElementById('qr-container').style.display = 'block';
+          document.getElementById('qrcode').innerHTML = "";
+          
+          // Construit l'URL exacte avec le code du salon
+          const currentUrl = window.location.href.split('?')[0];
+          new QRCode(document.getElementById("qrcode"), {
+            text: currentUrl,
+            width: 130,
+            height: 130
+          });
         }
         
         updateLobbyUI();
@@ -976,7 +1004,6 @@
       const drawer = players.find(p => p.id === currentDrawerId);
       const winner = players.find(p => p.id === winnerId);
 
-      // Sauvegarde du dessin actuel dans la galerie
       const drawingData = canvas.toDataURL("image/png");
       drawingGallery.push({
         imageData: drawingData,
@@ -1034,7 +1061,6 @@
       document.getElementById('gameover-modal').classList.add('active');
     }
 
-    // --- DIAPORAMA GALERIE RETROSPECTIVE ---
     function startGalleryShow() {
       document.getElementById('gameover-modal').classList.remove('active');
       showScreen('screen-gallery');
@@ -1051,7 +1077,7 @@
       galleryTimer = setInterval(() => {
         galleryIndex = (galleryIndex + 1) % drawingGallery.length;
         renderGallerySlide();
-      }, 4000); // Défilement toutes les 4 secondes
+      }, 4000);
     }
 
     function renderGallerySlide() {
@@ -1060,7 +1086,7 @@
 
       const card = document.getElementById('gallery-card');
       card.style.animation = 'none';
-      card.offsetHeight; // Reset animation
+      card.offsetHeight;
       card.style.animation = 'fadeIn 0.5s ease-in-out';
 
       document.getElementById('gallery-title').innerText = `🎨 "${item.word}"`;
@@ -1077,7 +1103,6 @@
       updateGamePlayersUI();
     }
 
-    // --- MOTEUR TACTILE & SOURIS ---
     function setupCanvasListeners() {
       let lastNormX = 0, lastNormY = 0;
 
