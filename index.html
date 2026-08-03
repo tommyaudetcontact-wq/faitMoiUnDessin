@@ -32,7 +32,6 @@
       font-family: 'Quicksand', 'Segoe UI', sans-serif;
     }
 
-    /* dvh = Dynamic Viewport Height (s'adapte à la vraie hauteur disponible sur mobile) */
     html, body {
       width: 100vw;
       height: 100dvh;
@@ -78,6 +77,12 @@
       display: flex;
       flex-direction: column;
       position: relative;
+      transition: max-width 0.3s ease;
+    }
+
+    .sims-window.tv-fullscreen {
+      max-width: 100% !important;
+      border-radius: 0;
     }
 
     h1, h2, h3 {
@@ -86,7 +91,7 @@
       text-align: center;
     }
 
-    h1 { font-size: 1.5rem; }
+    h1 { font-size: 1.6rem; }
     h2 { font-size: 1.2rem; color: var(--sims-cyan-gloss); }
 
     .sims-btn {
@@ -148,7 +153,6 @@
       text-align: center;
     }
 
-    /* Scrolling fluide autorisé dans le lobby si l'écran mobile est petit */
     .screen { 
       display: none; 
       height: 100%; 
@@ -242,6 +246,52 @@
       cursor: crosshair;
     }
 
+    /* BANDEROLLE DE NOTIFICATION GÉANTE TV GRAND ÉCRAN */
+    .tv-banner-notification {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: linear-gradient(180deg, #fff38a 0%, var(--sims-yellow) 50%, #d4a000 100%);
+      color: #000;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.4rem;
+      padding: 12px 30px;
+      border-radius: 30px;
+      border: 3px solid #fff;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      z-index: 2500;
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      text-align: center;
+    }
+
+    .tv-banner-notification.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .tv-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr 320px;
+      gap: 12px;
+      height: calc(100% - 40px);
+      margin-top: 6px;
+      width: 100%;
+    }
+
+    .tv-col {
+      background: rgba(0, 20, 40, 0.7);
+      border: 2px solid var(--sims-cyan-gloss);
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
     .drawer-overlay {
       position: absolute;
       top: 0; right: 0; bottom: 0;
@@ -275,29 +325,42 @@
     .chat-msg.system { color: var(--sims-cyan-gloss); font-style: italic; }
     .chat-msg.correct { color: var(--sims-plumbob-green); font-weight: bold; }
 
-    .player-list {
+    .player-list-unlimited {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      max-height: 120px;
+      width: 100%;
+    }
+
+    .player-list-scrollable {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
       overflow-y: auto;
-      margin-bottom: 8px;
+      flex-grow: 1;
     }
 
     .player-card {
       background: rgba(255,255,255,0.1);
       border: 2px solid var(--sims-cyan-gloss);
       border-radius: 12px;
-      padding: 5px 8px;
+      padding: 6px 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: relative;
+      transition: all 0.3s ease;
     }
 
     .player-card.is-drawer {
       border-color: var(--sims-yellow);
       background: rgba(255, 215, 0, 0.25);
+      animation: drawerGlow 1.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes drawerGlow {
+      0% { box-shadow: 0 0 5px var(--sims-yellow); }
+      100% { box-shadow: 0 0 20px var(--sims-yellow); }
     }
 
     .emoji-bubble {
@@ -326,7 +389,6 @@
       font-size: 1.2rem;
       cursor: pointer;
     }
-    .emoji-btn:hover { transform: scale(1.3); }
 
     .toolbar {
       display: flex;
@@ -419,15 +481,23 @@
       object-fit: contain;
     }
 
-    .qr-box {
+    .qr-box-large {
       background: #fff;
-      padding: 8px;
-      border-radius: 14px;
+      padding: 14px;
+      border-radius: 20px;
       display: inline-block;
-      margin: 6px 0;
+      margin: 10px 0;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
     }
 
-    /* Zone fixe en bas pour le bouton Lancer */
+    .qr-box-small {
+      background: #fff;
+      padding: 4px;
+      border-radius: 10px;
+      display: inline-block;
+      margin: 4px 0;
+    }
+
     .lobby-action-bar {
       position: sticky;
       bottom: 0;
@@ -446,8 +516,11 @@
 </head>
 <body>
 
-  <div class="sims-window">
+  <div class="sims-window" id="app-window">
     
+    <!-- BANDEAU NOTIFICATION GEANTE TV -->
+    <div id="tv-banner" class="tv-banner-notification">🎮 Événement Partie</div>
+
     <!-- MENU PRINCIPAL -->
     <div id="screen-menu" class="screen active" style="justify-content: center; align-items: center;">
       <h1><span class="plumbob"></span>FAIS-MOI UN DESSIN</h1>
@@ -480,22 +553,21 @@
     <!-- LOBBY -->
     <div id="screen-lobby" class="screen">
       <h2>SALON D'ATTENTE</h2>
-      <p style="text-align: center;">Code du Salon : <b id="display-room-code" style="color: var(--sims-yellow); font-size: 1.3rem;">----</b></p>
+      <p style="text-align: center;">Code du Salon : <b id="display-room-code" style="color: var(--sims-yellow); font-size: 1.5rem;">----</b></p>
       <p style="text-align: center; font-size: 0.85rem; color: var(--sims-cyan-gloss);">Difficulté : <b id="display-difficulty">Moyen</b></p>
 
-      <!-- QR CODE MODE GRAND ECRAN -->
-      <div id="qr-container" style="display: none; text-align: center; margin-top: 4px;">
-        <p style="font-size: 0.8rem; color: var(--sims-yellow); font-weight: bold;">📷 Scannez avec votre téléphone pour rejoindre :</p>
-        <div class="qr-box">
+      <div id="qr-container" style="display: none; text-align: center; margin-top: 8px;">
+        <p style="font-size: 1rem; color: var(--sims-yellow); font-weight: bold;">📷 Scannez avec votre téléphone pour rejoindre :</p>
+        <div class="qr-box-large">
           <div id="qrcode"></div>
         </div>
       </div>
 
       <div style="max-width: 450px; margin: 8px auto; flex-grow: 1; display: flex; flex-direction: column; width: 100%;">
         <h3>Joueurs Présents</h3>
-        <div class="player-list" id="lobby-player-list" style="margin-top: 6px;"></div>
+        <div class="player-list-unlimited" id="lobby-player-list" style="margin-top: 6px;"></div>
         
-        <p style="font-size: 0.8rem; text-align: center; margin-top: 4px;">Réactions Émotions :</p>
+        <p style="font-size: 0.8rem; text-align: center; margin-top: 12px;">Réactions Émotions :</p>
         <div class="emoji-bar">
           <span class="emoji-btn" onclick="sendEmoji('😄')">😄</span>
           <span class="emoji-btn" onclick="sendEmoji('😡')">😡</span>
@@ -506,7 +578,6 @@
         </div>
       </div>
 
-      <!-- BOUTON DÉMARRER FIXE ET TOUJOURS VISIBLE -->
       <div class="lobby-action-bar">
         <button id="btn-start-game" class="sims-btn sims-btn-green" style="display: none; font-size: 1.1rem; padding: 10px 24px; width: 90%; max-width: 320px;" onclick="startGame()">▶ LANCER LA PARTIE</button>
       </div>
@@ -530,11 +601,11 @@
 
         <div>Score : <b id="my-score" style="color: var(--sims-plumbob-green);">0</b></div>
 
-        <button class="sims-btn sims-btn-yellow" style="padding: 4px 8px; font-size: 0.8rem;" onclick="toggleMenuDrawer()">💬 Joueurs / Chat</button>
+        <button id="btn-toggle-chat" class="sims-btn sims-btn-yellow" style="padding: 4px 8px; font-size: 0.8rem;" onclick="toggleMenuDrawer()">💬 Joueurs / Chat</button>
       </div>
 
-      <!-- CARRE DE DESSIN -->
-      <div class="main-game-area">
+      <!-- VUE STANDARD (TÉLÉPHONE) -->
+      <div id="standard-game-layout" class="main-game-area">
         <div class="square-canvas-wrapper" id="canvas-container">
           <canvas id="paint-canvas" width="600" height="600"></canvas>
         </div>
@@ -565,14 +636,39 @@
         </div>
       </div>
 
-      <!-- TIROIR LATÉRAL -->
+      <!-- VUE TV GRAND ÉCRAN (3 COLONNES EN PLEIN ÉCRAN) -->
+      <div id="tv-game-layout" class="tv-layout" style="display: none;">
+        <div class="tv-col">
+          <div style="text-align: center;">
+            <p style="font-size: 0.75rem; color: var(--sims-yellow); font-weight: bold;">📱 Reconnexion :</p>
+            <div class="qr-box-small"><div id="qrcode-tv"></div></div>
+            <small id="tv-room-code-label" style="display: block; font-weight: bold; color: var(--sims-cyan-gloss);">Code: ----</small>
+          </div>
+          <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.2); margin: 8px 0;">
+          <h3 style="font-size: 0.9rem;">Chat & Activité</h3>
+          <div class="chat-box" id="tv-chat-box"></div>
+        </div>
+
+        <div class="main-game-area">
+          <div class="square-canvas-wrapper">
+            <canvas id="paint-canvas-tv" width="600" height="600"></canvas>
+          </div>
+        </div>
+
+        <div class="tv-col">
+          <h3 style="font-size: 0.95rem;">🏆 Classement en Direct</h3>
+          <div class="player-list-scrollable" id="tv-player-leaderboard" style="margin-top: 8px;"></div>
+        </div>
+      </div>
+
+      <!-- TIROIR LATÉRAL MOBILE (JEU) -->
       <div id="side-drawer" class="drawer-overlay">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <h3>Menu Joueurs & Chat</h3>
           <button class="sims-btn sims-btn-pink" style="padding: 2px 8px; font-size: 0.8rem;" onclick="toggleMenuDrawer()">✕</button>
         </div>
 
-        <div class="player-list" id="game-player-list"></div>
+        <div class="player-list-scrollable" id="game-player-list"></div>
 
         <div class="emoji-bar" style="margin-bottom: 8px;">
           <span class="emoji-btn" onclick="sendEmoji('😄')">😄</span>
@@ -593,7 +689,7 @@
 
     </div>
 
-    <!-- ECRAN GALERIE RETROSPECTIVE -->
+    <!-- GALERIE RETROSPECTIVE -->
     <div id="screen-gallery" class="screen">
       <h2>🖼️ GALERIE DE LA PARTIE 🖼️</h2>
       <div class="gallery-container">
@@ -611,7 +707,7 @@
 
   </div>
 
-  <!-- MODAL SELECTION DU MOT -->
+  <!-- MODAL SELECTION MOT -->
   <div id="word-modal" class="modal">
     <div class="modal-card">
       <h2 style="margin-bottom: 10px;">Choisissez un mot à dessiner</h2>
@@ -620,7 +716,7 @@
     </div>
   </div>
 
-  <!-- MODAL DESIGNATION DU GAGNANT -->
+  <!-- MODAL GAGNANT -->
   <div id="winner-modal" class="modal">
     <div class="modal-card">
       <h2 id="winner-modal-title">Qui a deviné ?</h2>
@@ -628,12 +724,24 @@
     </div>
   </div>
 
-  <!-- MODAL CLASSEMENT FINAL ET COMMANDES CHEF DE PARTIE -->
+  <!-- MODAL DECONNEXION POUR LE CHEF -->
+  <div id="disconnect-modal" class="modal">
+    <div class="modal-card">
+      <h2>⚠️ Joueur Déconnecté ⚠️</h2>
+      <p id="disconnect-modal-text" style="margin: 10px 0; color: var(--sims-yellow);">Un joueur a quitté la partie.</p>
+      <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+        <button class="sims-btn sims-btn-green" onclick="decisionWaitPlayer(true)">⏳ L'attendre (Pause)</button>
+        <button class="sims-btn sims-btn-pink" onclick="decisionWaitPlayer(false)">▶ Continuer sans lui</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CLASSEMENT FINAL -->
   <div id="gameover-modal" class="modal">
     <div class="modal-card">
       <h2>🏆 FIN DE LA PARTIE 🏆</h2>
       <p style="margin: 8px 0; color: var(--sims-cyan-gloss);">Résultats des 3 Manches :</p>
-      <div id="final-scores-list" style="display: flex; flex-direction: column; gap: 6px; margin: 12px 0;"></div>
+      <div id="final-scores-list" class="player-list-unlimited" style="margin: 12px 0;"></div>
       
       <div id="leader-final-controls" style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
         <button id="btn-show-gallery" class="sims-btn sims-btn-yellow" onclick="triggerGalleryFromLeader()">🖼️ AFFICHER LA GALERIE SUR TV</button>
@@ -642,634 +750,6 @@
     </div>
   </div>
 
-  <script>
-    const LOCAL_FALLBACK = {
-      facile: ["CHAT", "SOLEIL", "MAISON", "POMME", "BALLON", "FLEUR", "AVION", "POISSON", "LIT", "ARBRE", "BANANE", "LUNE", "OISEAU", "GLACE", "PIZZA"],
-      moyen: ["COURIR", "DANSER", "CUISINER", "SAUTER", "DORMIR", "CHANTER", "DESSINER", "NAGER", "CONDUIRE", "JOUER", "PEIGNER", "MANGER", "ECRIRE"],
-      difficile: ["ASTRONAUTE", "SOUCOUPE VOLANTE", "LABYRINTHE", "PYRAMIDE", "MICROSCOPE", "CATHEDRALE", "EXCALIBUR", "METEORITE", "TRANSFORMER"]
-    };
-
-    let usedWords = new Set();
-    let selectedDifficulty = "moyen";
-    let peer = null;
-    let connections = [];
-    let hostConn = null;
-    let isHost = false;
-    let myId = "";
-    let myName = "";
-    let roomCode = "";
-    let gameMode = "pvp";
-
-    let players = [];
-    let turnIndex = 0;
-    let currentRound = 1;
-    let maxRounds = 3;
-    let currentDrawerId = null;
-    let currentWord = "";
-    let timerInterval = null;
-    let timeLeft = 60;
-
-    let drawingGallery = [];
-    let galleryIndex = 0;
-    let galleryTimer = null;
-
-    const canvas = document.getElementById('paint-canvas');
-    const ctx = canvas.getContext('2d');
-    let isDrawing = false;
-    let currentColor = '#000000';
-    let currentLineWidth = 3;
-
-    window.onload = () => {
-      const savedName = localStorage.getItem("sims2_draw_name");
-      if (savedName) document.getElementById('player-name').value = savedName;
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlCode = urlParams.get('code');
-      if (urlCode) {
-        document.getElementById('room-code-input').value = urlCode;
-      }
-
-      setupCanvasListeners();
-    };
-
-    function showScreen(screenId) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      document.getElementById(screenId).classList.add('active');
-    }
-
-    function toggleMenuDrawer() {
-      document.getElementById('side-drawer').classList.toggle('open');
-    }
-
-    function saveProfile() {
-      myName = document.getElementById('player-name').value.trim() || ("Sim_" + Math.floor(Math.random() * 1000));
-      localStorage.setItem("sims2_draw_name", myName);
-    }
-
-    async function fetchWordsFromAPI(difficulty) {
-      try {
-        if (difficulty === 'moyen') {
-          const res = await fetch('https://trouve-mot.fr/api/categorie/15/3');
-          if (res.ok) {
-            const data = await res.json();
-            return data.map(item => item.name.toUpperCase());
-          }
-        } else {
-          const res = await fetch('https://trouve-mot.fr/api/random/3');
-          if (res.ok) {
-            const data = await res.json();
-            return data.map(item => item.name.toUpperCase());
-          }
-        }
-      } catch (e) {
-        console.warn("Fallback local utilisé:", e);
-      }
-      const pool = LOCAL_FALLBACK[difficulty] || LOCAL_FALLBACK["facile"];
-      return pool.filter(w => !usedWords.has(w)).sort(() => 0.5 - Math.random()).slice(0, 3);
-    }
-
-    function initPeer(customId = null, callback) {
-      saveProfile();
-      peer = customId ? new Peer(customId) : new Peer();
-
-      peer.on('open', id => {
-        myId = id;
-        if (callback) callback(id);
-      });
-
-      peer.on('connection', conn => handleIncomingConnection(conn));
-      peer.on('error', err => alert("Erreur réseau P2P: " + err.type));
-    }
-
-    function createRoom(mode) {
-      gameMode = mode;
-      selectedDifficulty = document.getElementById('difficulty-select').value;
-      roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-      isHost = true;
-
-      initPeer("sims2-draw-" + roomCode, () => {
-        document.getElementById('display-room-code').innerText = roomCode;
-        document.getElementById('display-difficulty').innerText = selectedDifficulty.toUpperCase();
-        
-        if (gameMode !== 'grand_ecran') {
-          players.push({ id: myId, name: myName, score: 0, emoji: '' });
-          document.getElementById('btn-start-game').style.display = 'inline-block';
-        } else {
-          document.getElementById('qr-container').style.display = 'block';
-          document.getElementById('qrcode').innerHTML = "";
-          
-          const directUrl = `${window.location.origin}${window.location.pathname}?code=${roomCode}`;
-          new QRCode(document.getElementById("qrcode"), {
-            text: directUrl,
-            width: 120,
-            height: 120
-          });
-        }
-        
-        updateLobbyUI();
-        showScreen('screen-lobby');
-      });
-    }
-
-    function joinRoom() {
-      const code = document.getElementById('room-code-input').value.trim();
-      if (!code) return alert("Code requis !");
-      roomCode = code;
-      isHost = false;
-
-      initPeer(null, () => {
-        hostConn = peer.connect("sims2-draw-" + roomCode);
-        hostConn.on('open', () => {
-          document.getElementById('display-room-code').innerText = roomCode;
-          showScreen('screen-lobby');
-          hostConn.send({ type: 'JOIN', name: myName });
-        });
-        hostConn.on('data', data => handleDataClient(data));
-      });
-    }
-
-    function handleIncomingConnection(conn) {
-      connections.push(conn);
-      conn.on('data', data => {
-        if (!isHost) return;
-
-        if (data.type === 'JOIN') {
-          let existing = players.find(p => p.name === data.name);
-          if (existing) {
-            existing.id = conn.peer;
-          } else {
-            players.push({ id: conn.peer, name: data.name, score: 0, emoji: '' });
-          }
-          broadcastState();
-        } else if (data.type === 'START_GAME_REQ') {
-          startGame();
-        } else if (data.type === 'TRIGGER_GALLERY_REQ') {
-          startGalleryShow();
-        } else if (data.type === 'WORD_CHOSEN') {
-          onWordChosen(data.word);
-        } else if (data.type === 'REQUEST_REGEN_WORDS') {
-          sendWordsToDrawer(conn.peer);
-        } else if (data.type === 'EMOJI') {
-          let p = players.find(p => p.id === conn.peer);
-          if (p) {
-            p.emoji = data.emoji;
-            broadcastState();
-            setTimeout(() => { p.emoji = ''; broadcastState(); }, 3000);
-          }
-        } else if (data.type === 'DRAW_LINE') {
-          broadcast('DRAW_LINE', data, conn.peer);
-          drawNormalized(data.x0, data.y0, data.x1, data.y1, data.color, data.width);
-        } else if (data.type === 'CHAT') {
-          broadcast('CHAT', { sender: data.sender, text: data.text });
-          addChatMessage(data.sender, data.text);
-        } else if (data.type === 'CLAIM_WINNER') {
-          awardPointsAndEndTurn(data.winnerId);
-        } else if (data.type === 'CLEAR') {
-          clearCanvas(false);
-          broadcast('CLEAR', {}, conn.peer);
-        }
-      });
-    }
-
-    function broadcast(type, payload, excludePeerId = null) {
-      connections.forEach(conn => {
-        if (conn.open && conn.peer !== excludePeerId) conn.send({ type, ...payload });
-      });
-    }
-
-    function broadcastState() {
-      if (!isHost) return;
-      const state = { players, currentRound, maxRounds, currentDrawerId, selectedDifficulty, gameMode };
-      broadcast('STATE', state);
-      updateLobbyUI();
-      updateGamePlayersUI();
-    }
-
-    function sendEmoji(emoji) {
-      if (isHost) {
-        let p = players.find(p => p.id === myId);
-        if (p) {
-          p.emoji = emoji;
-          broadcastState();
-          setTimeout(() => { p.emoji = ''; broadcastState(); }, 3000);
-        }
-      } else if (hostConn) {
-        hostConn.send({ type: 'EMOJI', emoji });
-      }
-    }
-
-    function handleDataClient(data) {
-      if (data.type === 'STATE') {
-        players = data.players;
-        currentRound = data.currentRound;
-        currentDrawerId = data.currentDrawerId;
-        selectedDifficulty = data.selectedDifficulty || "moyen";
-        gameMode = data.gameMode || "pvp";
-
-        // VÉRIFICATION DU CHEF DE PARTIE SUR CELLULAIRE :
-        // Le premier joueur de la liste voit TOUJOURS le bouton LANCER
-        const startBtn = document.getElementById('btn-start-game');
-        if (players.length > 0 && players[0].id === myId) {
-          startBtn.style.display = 'inline-block';
-        } else if (!isHost) {
-          startBtn.style.display = 'none';
-        }
-
-        document.getElementById('display-difficulty').innerText = selectedDifficulty.toUpperCase();
-        document.getElementById('game-round').innerText = `${currentRound}/${maxRounds}`;
-        updateLobbyUI();
-        updateGamePlayersUI();
-      } else if (data.type === 'START_GAME') {
-        showScreen('screen-game');
-      } else if (data.type === 'SELECT_WORD') {
-        showWordModal(data.words);
-      } else if (data.type === 'NEW_TURN') {
-        currentDrawerId = data.drawerId;
-        setupTurnUI(data.drawerName, data.wordLength);
-      } else if (data.type === 'DRAW_LINE') {
-        drawNormalized(data.x0, data.y0, data.x1, data.y1, data.color, data.width);
-      } else if (data.type === 'CLEAR') {
-        clearCanvas(false);
-      } else if (data.type === 'CHAT') {
-        addChatMessage(data.sender, data.text, data.isCorrect);
-      } else if (data.type === 'TIMER') {
-        updateTimerUI(data.timeLeft);
-      } else if (data.type === 'GAME_OVER') {
-        showGameOverModal(data.scores);
-      } else if (data.type === 'START_GALLERY') {
-        drawingGallery = data.gallery;
-        startGalleryShow();
-      }
-    }
-
-    function updateLobbyUI() {
-      const list = document.getElementById('lobby-player-list');
-      if (!list) return;
-      list.innerHTML = '';
-      players.forEach((p, index) => {
-        const isLeader = (index === 0);
-        const div = document.createElement('div');
-        div.className = 'player-card';
-        div.innerHTML = `<span>👤 <b>${p.name}</b> ${isLeader ? '<small style="color:var(--sims-yellow); font-weight:bold;">(Chef de Partie)</small>' : ''}</span>${p.emoji ? `<span class="emoji-bubble">${p.emoji}</span>` : ''}`;
-        list.appendChild(div);
-      });
-    }
-
-    function updateGamePlayersUI() {
-      const list = document.getElementById('game-player-list');
-      if (!list) return;
-      list.innerHTML = '';
-      players.forEach(p => {
-        const isDrawer = (p.id === currentDrawerId);
-        const div = document.createElement('div');
-        div.className = 'player-card' + (isDrawer ? ' is-drawer' : '');
-        div.innerHTML = `<div><div>${isDrawer ? '✏️' : '👤'} <b>${p.name}</b></div><small style="color:var(--sims-yellow);">${p.score} pts</small></div>${p.emoji ? `<span class="emoji-bubble">${p.emoji}</span>` : ''}`;
-        list.appendChild(div);
-        if (p.id === myId) document.getElementById('my-score').innerText = p.score;
-      });
-      document.getElementById('game-round').innerText = `${currentRound}/${maxRounds}`;
-    }
-
-    function startGame() {
-      if (!isHost) {
-        hostConn.send({ type: 'START_GAME_REQ' });
-        return;
-      }
-      if (players.length === 0) return alert("Attendez au moins 1 joueur !");
-      turnIndex = 0;
-      currentRound = 1;
-      drawingGallery = [];
-      broadcast('START_GAME', {});
-      showScreen('screen-game');
-      startTurn();
-    }
-
-    async function sendWordsToDrawer(targetPeerId) {
-      const choices = await fetchWordsFromAPI(selectedDifficulty);
-      if (targetPeerId === myId) {
-        showWordModal(choices);
-      } else {
-        const conn = connections.find(c => c.peer === targetPeerId);
-        if (conn) conn.send({ type: 'SELECT_WORD', words: choices });
-      }
-    }
-
-    function startTurn() {
-      clearCanvas(true);
-      const drawer = players[turnIndex % players.length];
-      currentDrawerId = drawer.id;
-
-      sendWordsToDrawer(currentDrawerId);
-      broadcastState();
-    }
-
-    function requestNewWords() {
-      if (isHost) {
-        sendWordsToDrawer(myId);
-      } else if (hostConn) {
-        hostConn.send({ type: 'REQUEST_REGEN_WORDS' });
-      }
-    }
-
-    function onWordChosen(word) {
-      document.getElementById('word-modal').classList.remove('active');
-      currentWord = word;
-      usedWords.add(word);
-
-      if (!isHost) {
-        hostConn.send({ type: 'WORD_CHOSEN', word });
-        return;
-      }
-
-      const drawer = players.find(p => p.id === currentDrawerId);
-      const payload = {
-        type: 'NEW_TURN',
-        drawerId: currentDrawerId,
-        drawerName: drawer ? drawer.name : "Anonyme",
-        wordLength: word.length
-      };
-
-      broadcast('NEW_TURN', payload);
-      handleDataClient(payload);
-      startTimer();
-    }
-
-    function startTimer() {
-      clearInterval(timerInterval);
-      timeLeft = 60;
-      updateTimerUI(60);
-
-      timerInterval = setInterval(() => {
-        timeLeft--;
-        broadcast('TIMER', { timeLeft });
-        updateTimerUI(timeLeft);
-
-        if (timeLeft <= 0) {
-          clearInterval(timerInterval);
-          if (myId === currentDrawerId) openWinnerSelectionModal(true);
-        }
-      }, 1000);
-    }
-
-    function updateTimerUI(seconds) {
-      document.getElementById('timer-text').innerText = seconds;
-      const circle = document.getElementById('timer-circle-progress');
-      if (circle) circle.style.strokeDashoffset = 100 - (seconds / 60 * 100);
-    }
-
-    function openWinnerSelectionModal(isTimeOut = false) {
-      const container = document.getElementById('winner-candidates');
-      document.getElementById('winner-modal-title').innerText = isTimeOut ? "⏰ Temps Écoulé !" : "✨ Qui a deviné ?";
-      container.innerHTML = '';
-
-      players.filter(p => p.id !== currentDrawerId).forEach(p => {
-        const btn = document.createElement('button');
-        btn.className = 'sims-btn sims-btn-green';
-        btn.innerText = `🏆 ${p.name}`;
-        btn.onclick = () => selectWinner(p.id);
-        container.appendChild(btn);
-      });
-
-      const noneBtn = document.createElement('button');
-      noneBtn.className = 'sims-btn sims-btn-pink';
-      noneBtn.innerText = '❌ Personne / Aucun Gagnant';
-      noneBtn.onclick = () => selectWinner(null);
-      container.appendChild(noneBtn);
-
-      document.getElementById('winner-modal').classList.add('active');
-    }
-
-    function selectWinner(winnerId) {
-      document.getElementById('winner-modal').classList.remove('active');
-      if (isHost) awardPointsAndEndTurn(winnerId);
-      else if (hostConn) hostConn.send({ type: 'CLAIM_WINNER', winnerId });
-    }
-
-    function awardPointsAndEndTurn(winnerId) {
-      clearInterval(timerInterval);
-      const drawer = players.find(p => p.id === currentDrawerId);
-      const winner = players.find(p => p.id === winnerId);
-
-      const drawingData = canvas.toDataURL("image/png");
-      drawingGallery.push({
-        imageData: drawingData,
-        drawerName: drawer ? drawer.name : "Anonyme",
-        word: currentWord,
-        winnerName: winner ? winner.name : "Personne"
-      });
-
-      if (winnerId) {
-        const earned = Math.max(100, timeLeft * 10);
-        if (winner) winner.score += earned;
-        if (drawer) drawer.score += earned;
-
-        const msg = `🎉 ${winner ? winner.name : 'Un joueur'} a deviné ! (+${earned} pts)`;
-        broadcast('CHAT', { sender: 'SYSTEME', text: msg, isCorrect: true });
-        addChatMessage('SYSTEME', msg, true);
-      } else {
-        const msg = `⌛ Fin du tour ! Le mot était : ${currentWord}`;
-        broadcast('CHAT', { sender: 'SYSTEME', text: msg, isCorrect: false });
-        addChatMessage('SYSTEME', msg, false);
-      }
-
-      broadcastState();
-      setTimeout(endTurn, 3000);
-    }
-
-    function endTurn() {
-      turnIndex++;
-      
-      if (turnIndex % players.length === 0) {
-        currentRound++;
-      }
-
-      if (currentRound > maxRounds) {
-        const sorted = [...players].sort((a,b) => b.score - a.score);
-        if (isHost) {
-          broadcast('GAME_OVER', { scores: sorted });
-        }
-        showGameOverModal(sorted);
-      } else {
-        startTurn();
-      }
-    }
-
-    function showGameOverModal(sortedPlayers) {
-      const container = document.getElementById('final-scores-list');
-      container.innerHTML = '';
-      sortedPlayers.forEach((p, idx) => {
-        const medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : '👤'));
-        const div = document.createElement('div');
-        div.className = 'player-card';
-        div.innerHTML = `<span>${medal} <b>${p.name}</b></span> <b style="color:var(--sims-yellow);">${p.score} pts</b>`;
-        container.appendChild(div);
-      });
-      document.getElementById('gameover-modal').classList.add('active');
-
-      // Lancement automatique de la galerie après 4 secondes sur l'écran principal
-      setTimeout(() => {
-        startGalleryShow();
-      }, 4000);
-    }
-
-    function triggerGalleryFromLeader() {
-      if (isHost) {
-        startGalleryShow();
-      } else if (hostConn) {
-        hostConn.send({ type: 'TRIGGER_GALLERY_REQ' });
-        startGalleryShow();
-      }
-    }
-
-    function startGalleryShow() {
-      document.getElementById('gameover-modal').classList.remove('active');
-      showScreen('screen-gallery');
-
-      if (isHost) {
-        broadcast('START_GALLERY', { gallery: drawingGallery });
-      }
-
-      galleryIndex = 0;
-      if (drawingGallery.length === 0) return;
-
-      renderGallerySlide();
-      clearInterval(galleryTimer);
-      galleryTimer = setInterval(() => {
-        galleryIndex = (galleryIndex + 1) % drawingGallery.length;
-        renderGallerySlide();
-      }, 4000);
-    }
-
-    function renderGallerySlide() {
-      const item = drawingGallery[galleryIndex];
-      if (!item) return;
-
-      const card = document.getElementById('gallery-card');
-      card.style.animation = 'none';
-      card.offsetHeight;
-      card.style.animation = 'fadeIn 0.5s ease-in-out';
-
-      document.getElementById('gallery-title').innerText = `🎨 "${item.word}"`;
-      document.getElementById('gallery-author').innerText = `Dessiné par : ${item.drawerName}`;
-      document.getElementById('gallery-img').src = item.imageData;
-      document.getElementById('gallery-winner').innerText = `Deviné par : ${item.winnerName}`;
-    }
-
-    function setupTurnUI(drawerName, wordLength) {
-      const isDrawer = (myId === currentDrawerId);
-      document.getElementById('role-indicator').innerText = isDrawer ? `À VOUS DE DESSINER !` : `Dessinateur : ${drawerName}`;
-      document.getElementById('drawing-tools').style.display = isDrawer ? 'flex' : 'none';
-      document.getElementById('guess-input').disabled = isDrawer;
-      updateGamePlayersUI();
-    }
-
-    function setupCanvasListeners() {
-      let lastNormX = 0, lastNormY = 0;
-
-      const getNormalizedPos = e => {
-        const rect = canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return {
-          x: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)),
-          y: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
-        };
-      };
-
-      const startDrawing = e => {
-        if (myId !== currentDrawerId) return;
-
-        isDrawing = true;
-        const pos = getNormalizedPos(e);
-        lastNormX = pos.x; lastNormY = pos.y;
-      };
-
-      const draw = e => {
-        if (!isDrawing || myId !== currentDrawerId) return;
-        const pos = getNormalizedPos(e);
-
-        drawNormalized(lastNormX, lastNormY, pos.x, pos.y, currentColor, currentLineWidth);
-
-        const strokeData = { type: 'DRAW_LINE', x0: lastNormX, y0: lastNormY, x1: pos.x, y1: pos.y, color: currentColor, width: currentLineWidth };
-        if (isHost) broadcast('DRAW_LINE', strokeData);
-        else if (hostConn) hostConn.send(strokeData);
-
-        lastNormX = pos.x; lastNormY = pos.y;
-      };
-
-      const stopDrawing = () => { isDrawing = false; };
-
-      canvas.addEventListener('mousedown', startDrawing);
-      canvas.addEventListener('mousemove', draw);
-      canvas.addEventListener('mouseup', stopDrawing);
-
-      canvas.addEventListener('touchstart', startDrawing);
-      canvas.addEventListener('touchmove', draw);
-      canvas.addEventListener('touchend', stopDrawing);
-    }
-
-    function drawNormalized(nx0, ny0, nx1, ny1, color, width) {
-      ctx.beginPath();
-      ctx.moveTo(nx0 * 600, ny0 * 600);
-      ctx.lineTo(nx1 * 600, ny1 * 600);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = width;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      ctx.closePath();
-    }
-
-    function clearCanvas(notify = true) {
-      ctx.clearRect(0, 0, 600, 600);
-      if (notify) {
-        if (isHost) broadcast('CLEAR', {});
-        else if (hostConn) hostConn.send({ type: 'CLEAR' });
-      }
-    }
-
-    function setColor(color, el) {
-      currentColor = color;
-      document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-      if(el) el.classList.add('active');
-    }
-
-    function setBrushSize(size) { currentLineWidth = size; }
-
-    function showWordModal(words) {
-      const container = document.getElementById('word-options');
-      container.innerHTML = '';
-      words.forEach(w => {
-        const btn = document.createElement('button');
-        btn.className = 'sims-btn sims-btn-yellow';
-        btn.innerText = w;
-        btn.onclick = () => onWordChosen(w);
-        container.appendChild(btn);
-      });
-      document.getElementById('word-modal').classList.add('active');
-    }
-
-    function sendGuess() {
-      const input = document.getElementById('guess-input');
-      const text = input.value.trim();
-      if (!text || myId === currentDrawerId) return;
-
-      if (isHost) {
-        broadcast('CHAT', { sender: myName, text });
-        addChatMessage(myName, text);
-      } else if (hostConn) {
-        hostConn.send({ type: 'CHAT', sender: myName, text });
-      }
-      input.value = '';
-    }
-
-    function addChatMessage(sender, text, isCorrect = false) {
-      const box = document.getElementById('chat-box');
-      const div = document.createElement('div');
-      div.className = 'chat-msg' + (isCorrect ? ' correct' : (sender === 'SYSTEME' ? ' system' : ''));
-      div.innerHTML = `<b>${sender}:</b> ${text}`;
-      box.appendChild(div);
-      box.scrollTop = box.scrollHeight;
-    }
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
